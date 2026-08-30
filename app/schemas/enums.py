@@ -1,0 +1,8 @@
+from enum import Enum
+
+
+class HealthGoal(str, Enum):
+    INCREASE_INTAKE = "INCREASE_INTAKE"
+    MAINTAIN_HYDRATION = "MAINTAIN_HYDRATION"
+    BUILD_CONSISTENCY = "BUILD_CONSISTENCY"
+    
