@@ -12,7 +12,6 @@ from app.agent.tools import (
     save_recommendation,
 )
 
-
 llm = ChatOllama(
     model="qwen3:1.7b",
     temperature=0,
@@ -114,10 +113,13 @@ def check_data_quality_node(
         return {
             **state,
             "action": "NO_ACTION",
-            "insight": "There is not enough reliable hydration data.",
+            "insight": (
+                "There is not enough reliable hydration data "
+                "to make a meaningful recommendation."
+            ),
             "recommendation": (
-                "Collect more hydration data before making "
-                "a meaningful recommendation."
+                "Continue recording your daily water intake "
+                "so there is enough reliable data for analysis."
             ),
             "confidence": "HIGH",
         }
@@ -138,6 +140,25 @@ def route_after_quality_check(
     return "analyze"
 
 
+def clean_llm_json(content: str) -> str:
+    """
+    Remove common Markdown formatting around JSON.
+    """
+
+    content = content.strip()
+
+    if content.startswith("```json"):
+        content = content[7:]
+
+    elif content.startswith("```"):
+        content = content[3:]
+
+    if content.endswith("```"):
+        content = content[:-3]
+
+    return content.strip()
+
+
 def analyze_node(
     state: AgentState,
     db: Session,
@@ -156,7 +177,35 @@ User profile:
 Health summary:
 {json.dumps(health_summary, indent=2)}
 
-Analyze this information and choose the most appropriate action.
+Analyze this user's hydration information.
+
+Return ONLY valid JSON.
+
+Do not use Markdown.
+Do not use ```json.
+Do not include explanations outside the JSON.
+
+The JSON must have exactly these fields:
+
+{{
+    "insight": "short explanation of the user's current situation",
+    "action": "one allowed action",
+    "recommendation": "practical and conservative recommendation",
+    "confidence": "LOW, MEDIUM, or HIGH"
+}}
+
+The allowed actions are:
+
+{json.dumps(list(ALLOWED_ACTIONS))}
+
+Important:
+- Base the recommendation only on the supplied user profile and health summary.
+- Do not invent health conditions.
+- Do not diagnose medical conditions.
+- Do not prescribe medication or treatment.
+- Keep hydration recommendations conservative.
+- If the data quality is WARNING, acknowledge the data limitation.
+- If the data quality is GOOD, use the available trend and target information.
 """
 
     response = llm.invoke(
@@ -167,8 +216,11 @@ Analyze this information and choose the most appropriate action.
     )
 
     try:
-        result = json.loads(response.content)
-    except json.JSONDecodeError:
+        content = clean_llm_json(response.content)
+
+        result = json.loads(content)
+
+    except (json.JSONDecodeError, TypeError):
         return {
             **state,
             "error": "LLM returned invalid JSON",
@@ -176,11 +228,44 @@ Analyze this information and choose the most appropriate action.
 
     action = result.get("action")
 
+    insight = result.get("insight")
+    recommendation = result.get("recommendation")
+    confidence = result.get("confidence")
+
     if action not in ALLOWED_ACTIONS:
         return {
             **state,
             "error": f"Invalid agent action: {action}",
         }
+
+    if not isinstance(insight, str) or not insight.strip():
+        return {
+            **state,
+            "error": "LLM returned an invalid insight",
+        }
+
+    if not isinstance(recommendation, str) or not recommendation.strip():
+        return {
+            **state,
+            "error": "LLM returned an invalid recommendation",
+        }
+
+    if confidence not in {
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+    }:
+        return {
+            **state,
+            "error": f"Invalid confidence value: {confidence}",
+        }
+
+    result = {
+        "insight": insight.strip(),
+        "action": action,
+        "recommendation": recommendation.strip(),
+        "confidence": confidence,
+    }
 
     log_agent_execution(
         db=db,
@@ -191,22 +276,16 @@ Analyze this information and choose the most appropriate action.
             "health_summary": health_summary,
         },
         tool_output=result,
-        decision_summary=result.get("insight"),
+        decision_summary=result["insight"],
         final_action=action,
     )
 
     return {
         **state,
-        "insight": result.get("insight", ""),
-        "action": action,
-        "recommendation": result.get(
-            "recommendation",
-            "",
-        ),
-        "confidence": result.get(
-            "confidence",
-            "LOW",
-        ),
+        "insight": result["insight"],
+        "action": result["action"],
+        "recommendation": result["recommendation"],
+        "confidence": result["confidence"],
     }
 
 
@@ -222,9 +301,18 @@ def save_recommendation_node(
         db=db,
         user_id=state["user_id"],
         insight=state.get("insight", ""),
-        recommendation=state.get("recommendation", ""),
-        action=state.get("action", "NO_ACTION"),
-        confidence=state.get("confidence", "LOW"),
+        recommendation=state.get(
+            "recommendation",
+            "",
+        ),
+        action=state.get(
+            "action",
+            "NO_ACTION",
+        ),
+        confidence=state.get(
+            "confidence",
+            "LOW",
+        ),
     )
 
     log_agent_execution(

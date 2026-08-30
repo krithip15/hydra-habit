@@ -7,7 +7,6 @@ from app.models.user import User
 from app.models.recommendation import Recommendation
 from app.schemas.recommendation import RecommendationResponse
 
-
 router = APIRouter(
     prefix="/recommendations",
     tags=["Recommendations"],

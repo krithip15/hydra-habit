@@ -9,7 +9,6 @@ from app.api.health_summary import router as health_summary_router
 from app.api.recommendations import router as recommendations_router
 from app.api.users import router as users_router
 
-
 app = FastAPI(title="HydraHabit API")
 
 
@@ -24,9 +23,7 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 @app.get("/", include_in_schema=False)
 def serve_frontend():
-    return FileResponse(
-        FRONTEND_DIR / "index.html"
-    )
+    return FileResponse(FRONTEND_DIR / "index.html")
 
 
 @app.get("/style.css", include_in_schema=False)

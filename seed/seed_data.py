@@ -14,18 +14,14 @@ def reset_database(db):
     Keeps the database tables/schema intact.
     """
 
-    db.execute(
-        text(
-            """
+    db.execute(text("""
             TRUNCATE TABLE
                 agent_execution_logs,
                 recommendations,
                 hydration_records,
                 users
             RESTART IDENTITY CASCADE
-            """
-        )
-    )
+            """))
 
     db.commit()
 
@@ -160,9 +156,7 @@ def main():
         print("Seed data created successfully.")
 
         for user in users:
-            print(
-                f"{user.id}: {user.name}"
-            )
+            print(f"{user.id}: {user.name}")
 
     finally:
         db.close()

@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent.graph import build_graph
 from app.database.database import get_db
+from app.models.agent_execution_log import AgentExecutionLog
 
 router = APIRouter(
     prefix="/agent",
@@ -37,3 +39,28 @@ def analyze_user(
         "confidence": result.get("confidence"),
         "recommendation_id": result.get("recommendation_id"),
     }
+
+
+@router.get("/logs/{user_id}")
+def get_agent_logs(
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    logs = db.scalars(
+        select(AgentExecutionLog)
+        .where(AgentExecutionLog.user_id == user_id)
+        .order_by(AgentExecutionLog.created_at.desc())
+    ).all()
+
+    return [
+        {
+            "id": log.id,
+            "tool_name": log.tool_name,
+            "tool_input": log.tool_input,
+            "tool_output": log.tool_output,
+            "decision_summary": log.decision_summary,
+            "final_action": log.final_action,
+            "created_at": log.created_at,
+        }
+        for log in logs
+    ]

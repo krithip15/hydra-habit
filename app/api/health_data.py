@@ -12,7 +12,6 @@ from app.schemas.hydration import (
 )
 from app.services.hydration_service import create_hydration_record
 
-
 router = APIRouter(
     prefix="/health-data",
     tags=["Health Data"],

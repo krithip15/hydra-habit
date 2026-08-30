@@ -30,11 +30,21 @@ const analyzeButton = document.getElementById("analyzeButton");
 
 const recordsBox = document.getElementById("recordsBox");
 
+const summaryWindowLabel = document.getElementById("summaryWindowLabel");
+
+const agentTrace = document.getElementById("agentTrace");
+
+const traceSteps = document.getElementById("traceSteps");
+
 /* -----------------------------
    DEFAULT DATE
 ----------------------------- */
 
-hydrationDate.value = new Date().toISOString().split("T")[0];
+const today = new Date().toISOString().split("T")[0];
+
+hydrationDate.value = today;
+
+hydrationDate.max = today;
 
 /* -----------------------------
    LOAD USER
@@ -52,25 +62,27 @@ async function loadUser() {
   }
 
   try {
-    const response = await fetch(`/health-summary/${userId}`);
+    const userResponse = await fetch(`/users/${userId}`);
 
-    const summary = await response.json();
+    const user = await userResponse.json();
 
-    if (!response.ok) {
-      showMessage(hydrationMessage, summary.detail || "User not found.");
+    if (!userResponse.ok) {
+      showMessage(hydrationMessage, user.detail || "User not found.");
 
       return;
     }
 
     currentUserId = userId;
 
-    displayBasicProfile(summary);
-
-    displaySummary(summary);
+    displayUserProfile(user);
 
     await loadRecords();
 
+    await loadSummary();
+
     recommendationBox.classList.add("hidden");
+
+    agentTrace.classList.add("hidden");
 
     showMessage(hydrationMessage, "User loaded successfully.");
   } catch (error) {
@@ -81,27 +93,52 @@ async function loadUser() {
 }
 
 /* -----------------------------
-   DISPLAY BASIC PROFILE
+   DISPLAY USER PROFILE
 ----------------------------- */
 
-function displayBasicProfile(summary) {
+function displayUserProfile(user) {
   userProfile.classList.remove("hidden");
 
   userProfile.innerHTML = `
 
         <div class="profile-item">
-            <span>User ID</span>
-            <strong>${summary.user_id}</strong>
+            <span>Name</span>
+            <strong>${escapeHtml(user.name)}</strong>
+        </div>
+
+        <div class="profile-item">
+            <span>Age</span>
+            <strong>${user.age}</strong>
+        </div>
+
+        <div class="profile-item">
+            <span>Gender</span>
+            <strong>${escapeHtml(user.gender)}</strong>
+        </div>
+
+        <div class="profile-item">
+            <span>Height</span>
+            <strong>${user.height_cm} cm</strong>
+        </div>
+
+        <div class="profile-item">
+            <span>Weight</span>
+            <strong>${user.weight_kg} kg</strong>
+        </div>
+
+        <div class="profile-item">
+            <span>Health goal</span>
+            <strong>${formatStatus(user.health_goal)}</strong>
         </div>
 
         <div class="profile-item">
             <span>Daily target</span>
-            <strong>${summary.target_ml} ml</strong>
+            <strong>${user.daily_water_target_ml} ml</strong>
         </div>
 
         <div class="profile-item">
-            <span>Current status</span>
-            <strong>${formatStatus(summary.target_status)}</strong>
+            <span>Reminder time</span>
+            <strong>${user.preferred_reminder_time || "Not set"}</strong>
         </div>
 
     `;
@@ -126,6 +163,12 @@ async function addHydration() {
 
   if (!selectedDate) {
     showMessage(hydrationMessage, "Please select a date.");
+
+    return;
+  }
+
+  if (selectedDate > today) {
+    showMessage(hydrationMessage, "Hydration date cannot be in the future.");
 
     return;
   }
@@ -209,13 +252,30 @@ async function loadRecords() {
                 </p>
             `;
 
+      summaryWindowLabel.classList.add("hidden");
+
       return;
     }
 
+    summaryWindowLabel.classList.remove("hidden");
+
+    const todayDate = new Date();
+
+    todayDate.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(todayDate);
+
+    startDate.setDate(todayDate.getDate() - 6);
+
     const rows = records
       .map((record) => {
+        const recordDate = new Date(`${record.date}T00:00:00`);
+
+        const isInSummaryWindow =
+          recordDate >= startDate && recordDate <= todayDate;
+
         return `
-                    <tr>
+                    <tr class="${isInSummaryWindow ? "summary-row" : ""}">
 
                         <td>
                             ${formatDate(record.date)}
@@ -227,8 +287,22 @@ async function loadRecords() {
                             </strong>
                         </td>
 
-                        <td class="record-status">
-                            Stored
+                        <td>
+
+                            ${
+                              isInSummaryWindow
+                                ? `
+                                        <span class="summary-status">
+                                            IN SUMMARY
+                                        </span>
+                                      `
+                                : `
+                                        <span class="older-status">
+                                            Older record
+                                        </span>
+                                      `
+                            }
+
                         </td>
 
                     </tr>
@@ -348,6 +422,8 @@ async function analyzeHydration() {
 
   analyzeButton.textContent = "Analyzing...";
 
+  agentTrace.classList.add("hidden");
+
   try {
     const response = await fetch(`/agent/analyze/${currentUserId}`, {
       method: "POST",
@@ -380,6 +456,8 @@ async function analyzeHydration() {
       agentMessage,
       `Analysis completed · Recommendation #${data.recommendation_id}`,
     );
+
+    await loadAgentTrace();
   } catch (error) {
     console.error(error);
 
@@ -389,6 +467,109 @@ async function analyzeHydration() {
 
     analyzeButton.textContent = "Analyze My Hydration";
   }
+}
+
+/* -----------------------------
+   LOAD AGENT TRACE
+----------------------------- */
+
+async function loadAgentTrace() {
+  if (!currentUserId) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/agent/logs/${currentUserId}`);
+
+    const logs = await response.json();
+
+    if (!response.ok || !Array.isArray(logs) || logs.length === 0) {
+      agentTrace.classList.add("hidden");
+
+      return;
+    }
+
+    /*
+     * Logs are returned newest first.
+     * Reverse them so the workflow is
+     * displayed in execution order.
+     */
+    const latestRun = getLatestRun(logs);
+
+    const orderedLogs = latestRun.reverse();
+
+    const stepNames = {
+      get_user_profile: "User profile retrieved",
+
+      get_hydration_summary: "Hydration summary calculated",
+
+      check_data_quality: "Data quality checked",
+
+      llm_analyze: "AI recommendation generated",
+
+      save_recommendation: "Recommendation saved",
+    };
+
+    traceSteps.innerHTML = orderedLogs
+      .map((log, index) => {
+        const label = stepNames[log.tool_name] || formatStatus(log.tool_name);
+
+        return `
+
+                        <div class="trace-step">
+
+                            <div class="trace-icon">
+                                ✓
+                            </div>
+
+                            <span>
+                                ${escapeHtml(label)}
+                            </span>
+
+                            <small>
+                                Step ${index + 1}
+                            </small>
+
+                        </div>
+
+                    `;
+      })
+      .join("");
+
+    agentTrace.classList.remove("hidden");
+  } catch (error) {
+    console.error(error);
+
+    agentTrace.classList.add("hidden");
+  }
+}
+
+/* -----------------------------
+   GET LATEST AGENT RUN
+----------------------------- */
+
+function getLatestRun(logs) {
+  const expectedSteps = [
+    "get_user_profile",
+    "get_hydration_summary",
+    "check_data_quality",
+    "llm_analyze",
+    "save_recommendation",
+  ];
+
+  const latestRun = [];
+
+  for (const log of logs) {
+    if (expectedSteps.includes(log.tool_name)) {
+      latestRun.push(log);
+    }
+
+    if (log.tool_name === "get_user_profile" && latestRun.length > 1) {
+      break;
+    }
+  }
+
+  return latestRun;
 }
 
 /* -----------------------------
@@ -414,6 +595,14 @@ function formatDate(dateString) {
     month: "short",
     year: "numeric",
   });
+}
+
+function escapeHtml(value) {
+  const div = document.createElement("div");
+
+  div.textContent = value ?? "";
+
+  return div.innerHTML;
 }
 
 function showMessage(element, message) {

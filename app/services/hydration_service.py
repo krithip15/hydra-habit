@@ -1,5 +1,8 @@
+from datetime import date
+
 from fastapi import HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.hydration_record import HydrationRecord
@@ -12,7 +15,17 @@ def create_hydration_record(
     record_data: HydrationRecordCreate,
 ) -> HydrationRecord:
 
-    user = db.get(User, record_data.user_id)
+    # Do not allow future hydration records.
+    if record_data.date > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Hydration date cannot be in the future",
+        )
+
+    user = db.get(
+        User,
+        record_data.user_id,
+    )
 
     if user is None:
         raise HTTPException(
@@ -40,7 +53,17 @@ def create_hydration_record(
     )
 
     db.add(record)
-    db.commit()
-    db.refresh(record)
+
+    try:
+        db.commit()
+        db.refresh(record)
+
+    except IntegrityError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Hydration record already exists for this user and date",
+        )
 
     return record

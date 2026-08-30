@@ -8,6 +8,7 @@ from app.models.recommendation import Recommendation
 from app.models.user import User
 from app.services.health_summary_service import get_health_summary
 
+
 def get_user_profile(
     db: Session,
     user_id: int,
@@ -66,6 +67,7 @@ def save_recommendation(
         "recommendation_id": recommendation_record.id,
         "status": "saved",
     }
+
 
 def log_agent_execution(
     db: Session,
