@@ -5,7 +5,10 @@ from app.database.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter(
+    prefix="/users",
+    tags=["Users"],
+)
 
 
 @router.post(

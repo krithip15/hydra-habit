@@ -7,7 +7,6 @@ from app.models.hydration_record import HydrationRecord
 from app.models.user import User
 from app.schemas.health_summary import HealthSummaryResponse
 
-
 SUSPICIOUS_INTAKE_THRESHOLD_ML = 10_000
 
 
@@ -57,18 +56,12 @@ def get_health_summary(
         .order_by(HydrationRecord.date)
     ).all()
 
-    records_by_date = {
-        record.date: record
-        for record in records
-    }
+    records_by_date = {record.date: record for record in records}
 
     valid_values: list[int] = []
     suspicious_days = 0
 
-    for current_date in (
-        start_date + timedelta(days=i)
-        for i in range(7)
-    ):
+    for current_date in (start_date + timedelta(days=i) for i in range(7)):
         record = records_by_date.get(current_date)
 
         if record is None:
@@ -100,9 +93,7 @@ def get_health_summary(
 
     average = sum(valid_values) / valid_days
 
-    achievement = (
-        average / user.daily_water_target_ml
-    ) * 100
+    achievement = (average / user.daily_water_target_ml) * 100
 
     gap = max(
         user.daily_water_target_ml - average,

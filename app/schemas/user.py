@@ -32,6 +32,4 @@ class UserResponse(BaseModel):
     preferred_reminder_time: str | None
     health_limitation: str | None
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}

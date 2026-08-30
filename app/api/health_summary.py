@@ -5,7 +5,6 @@ from app.database.database import get_db
 from app.schemas.health_summary import HealthSummaryResponse
 from app.services.health_summary_service import get_health_summary
 
-
 router = APIRouter(
     prefix="/health-summary",
     tags=["Health Summary"],

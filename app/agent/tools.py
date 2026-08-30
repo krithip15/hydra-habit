@@ -1,5 +1,8 @@
+from datetime import date
+
 from sqlalchemy.orm import Session
 
+from app.models.recommendation import Recommendation
 from app.models.user import User
 from app.services.health_summary_service import get_health_summary
 
@@ -35,3 +38,30 @@ def get_hydration_summary(
         return None
 
     return summary.model_dump()
+
+
+def save_recommendation(
+    db: Session,
+    user_id: int,
+    insight: str,
+    recommendation: str,
+    action: str,
+    confidence: str,
+):
+    recommendation_record = Recommendation(
+        user_id=user_id,
+        date=date.today(),
+        insight=insight,
+        recommendation_text=recommendation,
+        action_type=action,
+        confidence=confidence,
+    )
+
+    db.add(recommendation_record)
+    db.commit()
+    db.refresh(recommendation_record)
+
+    return {
+        "recommendation_id": recommendation_record.id,
+        "status": "saved",
+    }

@@ -15,6 +15,4 @@ class HydrationRecordResponse(BaseModel):
     date: date
     water_intake_ml: int
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
