@@ -27,12 +27,12 @@ def build_graph(db):
 
     graph.add_node(
         "check_quality",
-        check_data_quality_node,
+        lambda state: check_data_quality_node(state, db),
     )
 
     graph.add_node(
         "analyze",
-        analyze_node,
+        lambda state: analyze_node(state, db),
     )
 
     graph.add_node(

@@ -1,8 +1,35 @@
+import argparse
 from datetime import date, timedelta
+
+from sqlalchemy import text
 
 from app.database.database import SessionLocal
 from app.models.hydration_record import HydrationRecord
 from app.models.user import User
+
+
+def reset_database(db):
+    """
+    Clear application data and reset PostgreSQL IDs.
+    Keeps the database tables/schema intact.
+    """
+
+    db.execute(
+        text(
+            """
+            TRUNCATE TABLE
+                agent_execution_logs,
+                recommendations,
+                hydration_records,
+                users
+            RESTART IDENTITY CASCADE
+            """
+        )
+    )
+
+    db.commit()
+
+    print("Application data cleared.")
 
 
 def create_users(db):
@@ -88,7 +115,9 @@ def create_hydration_records(db, users):
     ]
 
     for user, values in datasets:
+
         for days_ago, intake in enumerate(reversed(values)):
+
             if intake is None:
                 continue
 
@@ -104,16 +133,36 @@ def create_hydration_records(db, users):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Clear existing application data before seeding.",
+    )
+
+    args = parser.parse_args()
+
     db = SessionLocal()
 
     try:
+
+        if args.reset:
+            reset_database(db)
+
         users = create_users(db)
-        create_hydration_records(db, users)
+
+        create_hydration_records(
+            db,
+            users,
+        )
 
         print("Seed data created successfully.")
 
         for user in users:
-            print(f"{user.id}: {user.name}")
+            print(
+                f"{user.id}: {user.name}"
+            )
 
     finally:
         db.close()

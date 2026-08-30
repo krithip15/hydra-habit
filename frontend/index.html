@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>HydraHabit</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>HydraHabit</h1>
+        <p>Your simple hydration companion</p>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- PROFILE -->
+      <section class="card">
+        <div class="section-heading">
+          <p class="eyebrow">PROFILE</p>
+          <h2>Your Profile</h2>
+        </div>
+
+        <div class="input-row">
+          <div class="input-group">
+            <label for="userId">User ID</label>
+
+            <input
+              type="number"
+              id="userId"
+              placeholder="Enter user ID"
+              min="1"
+            />
+          </div>
+
+          <button id="loadUserButton">Load Profile</button>
+        </div>
+
+        <div id="userProfile" class="profile-box hidden"></div>
+      </section>
+
+      <!-- LOG HYDRATION -->
+      <section class="card">
+        <div class="section-heading">
+          <p class="eyebrow">DAILY LOG</p>
+          <h2>Log Hydration</h2>
+        </div>
+
+        <div class="input-row">
+          <div class="input-group">
+            <label for="hydrationDate">Date</label>
+
+            <input type="date" id="hydrationDate" />
+          </div>
+
+          <div class="input-group">
+            <label for="waterIntake">Water intake (ml)</label>
+
+            <input
+              type="number"
+              id="waterIntake"
+              placeholder="e.g. 1800"
+              min="0"
+            />
+          </div>
+
+          <button id="addHydrationButton">Add Intake</button>
+        </div>
+
+        <p id="hydrationMessage" class="message"></p>
+      </section>
+
+      <!-- RECENT RECORDS -->
+      <section class="card">
+        <div class="section-heading">
+          <p class="eyebrow">HISTORY</p>
+          <h2>Recent Hydration Records</h2>
+        </div>
+
+        <div id="recordsBox">
+          <p class="empty-state">Load a user to see hydration records.</p>
+        </div>
+      </section>
+
+      <!-- SUMMARY -->
+      <section class="card">
+        <div class="section-heading">
+          <p class="eyebrow">OVERVIEW</p>
+          <h2>Hydration Summary</h2>
+        </div>
+
+        <div class="summary-grid">
+          <div class="stat">
+            <span>Target</span>
+            <strong id="targetValue">—</strong>
+          </div>
+
+          <div class="stat">
+            <span>Average</span>
+            <strong id="averageValue">—</strong>
+          </div>
+
+          <div class="stat">
+            <span>Achievement</span>
+            <strong id="achievementValue">—</strong>
+          </div>
+
+          <div class="stat">
+            <span>Gap</span>
+            <strong id="gapValue">—</strong>
+          </div>
+
+          <div class="stat">
+            <span>Trend</span>
+            <strong id="trendValue">—</strong>
+          </div>
+
+          <div class="stat">
+            <span>Data quality</span>
+            <strong id="qualityValue">—</strong>
+          </div>
+        </div>
+
+        <p id="summaryMessage" class="message"></p>
+      </section>
+
+      <!-- AI RECOMMENDATION -->
+      <section class="card recommendation-card">
+        <div class="section-heading">
+          <p class="eyebrow">PERSONAL INSIGHT</p>
+          <h2>Hydration Recommendation</h2>
+        </div>
+
+        <button id="analyzeButton" class="primary-button">
+          Analyze My Hydration
+        </button>
+
+        <div id="recommendationBox" class="recommendation hidden">
+          <div class="recommendation-label">Insight</div>
+
+          <p id="insightText"></p>
+
+          <div class="recommendation-label">Recommendation</div>
+
+          <p id="recommendationText"></p>
+
+          <div class="recommendation-footer">
+            <span>
+              Action:
+              <strong id="actionText"></strong>
+            </span>
+
+            <span>
+              Confidence:
+              <strong id="confidenceText"></strong>
+            </span>
+          </div>
+        </div>
+
+        <p id="agentMessage" class="message"></p>
+      </section>
+    </main>
+
+    <footer>
+      <p>HydraHabit · Wellness tracking prototype</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

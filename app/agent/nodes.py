@@ -8,8 +8,10 @@ from app.agent.state import AgentState
 from app.agent.tools import (
     get_hydration_summary,
     get_user_profile,
+    log_agent_execution,
     save_recommendation,
 )
+
 
 llm = ChatOllama(
     model="qwen3:1.7b",
@@ -32,6 +34,16 @@ def get_profile_node(
             **state,
             "error": "User not found",
         }
+
+    log_agent_execution(
+        db=db,
+        user_id=state["user_id"],
+        tool_name="get_user_profile",
+        tool_input={
+            "user_id": state["user_id"],
+        },
+        tool_output=profile,
+    )
 
     return {
         **state,
@@ -58,6 +70,16 @@ def get_summary_node(
             "error": "Unable to generate health summary",
         }
 
+    log_agent_execution(
+        db=db,
+        user_id=state["user_id"],
+        tool_name="get_hydration_summary",
+        tool_input={
+            "user_id": state["user_id"],
+        },
+        tool_output=summary,
+    )
+
     return {
         **state,
         "health_summary": summary,
@@ -66,12 +88,27 @@ def get_summary_node(
 
 def check_data_quality_node(
     state: AgentState,
+    db: Session,
 ) -> AgentState:
 
     if state.get("error"):
         return state
 
     summary = state["health_summary"]
+
+    log_agent_execution(
+        db=db,
+        user_id=state["user_id"],
+        tool_name="check_data_quality",
+        tool_input={},
+        tool_output={
+            "data_quality": summary["data_quality"],
+            "valid_days": summary["valid_days"],
+            "missing_days": summary["missing_days"],
+            "suspicious_days": summary["suspicious_days"],
+        },
+        decision_summary="Data quality evaluated",
+    )
 
     if summary["data_quality"] == "INSUFFICIENT":
         return {
@@ -103,6 +140,7 @@ def route_after_quality_check(
 
 def analyze_node(
     state: AgentState,
+    db: Session,
 ) -> AgentState:
 
     if state.get("error"):
@@ -144,6 +182,19 @@ Analyze this information and choose the most appropriate action.
             "error": f"Invalid agent action: {action}",
         }
 
+    log_agent_execution(
+        db=db,
+        user_id=state["user_id"],
+        tool_name="llm_analyze",
+        tool_input={
+            "user_profile": user_profile,
+            "health_summary": health_summary,
+        },
+        tool_output=result,
+        decision_summary=result.get("insight"),
+        final_action=action,
+    )
+
     return {
         **state,
         "insight": result.get("insight", ""),
@@ -174,6 +225,19 @@ def save_recommendation_node(
         recommendation=state.get("recommendation", ""),
         action=state.get("action", "NO_ACTION"),
         confidence=state.get("confidence", "LOW"),
+    )
+
+    log_agent_execution(
+        db=db,
+        user_id=state["user_id"],
+        tool_name="save_recommendation",
+        tool_input={
+            "user_id": state["user_id"],
+            "action": state.get("action"),
+        },
+        tool_output=result,
+        decision_summary=state.get("insight"),
+        final_action=state.get("action"),
     )
 
     return {
