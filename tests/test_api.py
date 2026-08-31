@@ -94,3 +94,31 @@ def test_existing_user_summary_is_returned():
     assert "average_intake_ml" in data
     assert "trend" in data
     assert "data_quality" in data
+    
+def test_duplicate_hydration_record_is_rejected():
+    payload = {
+        "user_id": 1,
+        "date": "2026-08-20",
+        "water_intake_ml": 1800,
+    }
+
+    first_response = client.post(
+        "/health-data",
+        json=payload,
+    )
+
+    # If the record already exists from an earlier run,
+    # the duplicate behavior is still what we want to verify.
+    if first_response.status_code == 201:
+        second_response = client.post(
+            "/health-data",
+            json=payload,
+        )
+    else:
+        second_response = first_response
+
+    assert second_response.status_code == 409
+    assert (
+        second_response.json()["detail"]
+        == "Hydration record already exists for this user and date"
+    )

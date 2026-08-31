@@ -209,6 +209,7 @@ The project includes automated tests for:
 - Unknown users
 - Invalid hydration input
 - Future hydration dates
+- Duplicate hydration records
 - Profile retrieval
 - Health summary retrieval
 - Unknown-user API behavior
