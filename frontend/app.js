@@ -7,33 +7,23 @@ let currentUserId = null;
 ----------------------------- */
 
 const userIdInput = document.getElementById("userId");
-
 const loadUserButton = document.getElementById("loadUserButton");
-
 const userProfile = document.getElementById("userProfile");
 
 const hydrationDate = document.getElementById("hydrationDate");
-
 const waterIntake = document.getElementById("waterIntake");
-
 const addHydrationButton = document.getElementById("addHydrationButton");
-
 const hydrationMessage = document.getElementById("hydrationMessage");
 
 const summaryMessage = document.getElementById("summaryMessage");
-
 const agentMessage = document.getElementById("agentMessage");
-
 const recommendationBox = document.getElementById("recommendationBox");
-
 const analyzeButton = document.getElementById("analyzeButton");
 
 const recordsBox = document.getElementById("recordsBox");
-
 const summaryWindowLabel = document.getElementById("summaryWindowLabel");
 
 const agentTrace = document.getElementById("agentTrace");
-
 const traceSteps = document.getElementById("traceSteps");
 
 /* -----------------------------
@@ -43,7 +33,6 @@ const traceSteps = document.getElementById("traceSteps");
 const today = new Date().toISOString().split("T")[0];
 
 hydrationDate.value = today;
-
 hydrationDate.max = today;
 
 /* -----------------------------
@@ -77,11 +66,9 @@ async function loadUser() {
     displayUserProfile(user);
 
     await loadRecords();
-
     await loadSummary();
 
     recommendationBox.classList.add("hidden");
-
     agentTrace.classList.add("hidden");
 
     showMessage(hydrationMessage, "User loaded successfully.");
@@ -189,9 +176,7 @@ async function addHydration() {
 
       body: JSON.stringify({
         user_id: currentUserId,
-
         date: selectedDate,
-
         water_intake_ml: intake,
       }),
     });
@@ -212,7 +197,6 @@ async function addHydration() {
     waterIntake.value = "";
 
     await loadRecords();
-
     await loadSummary();
   } catch (error) {
     console.error(error);
@@ -275,38 +259,38 @@ async function loadRecords() {
           recordDate >= startDate && recordDate <= todayDate;
 
         return `
-                    <tr class="${isInSummaryWindow ? "summary-row" : ""}">
+                        <tr class="${isInSummaryWindow ? "summary-row" : ""}">
 
-                        <td>
-                            ${formatDate(record.date)}
-                        </td>
+                            <td>
+                                ${formatDate(record.date)}
+                            </td>
 
-                        <td>
-                            <strong>
-                                ${record.water_intake_ml} ml
-                            </strong>
-                        </td>
+                            <td>
+                                <strong>
+                                    ${record.water_intake_ml} ml
+                                </strong>
+                            </td>
 
-                        <td>
+                            <td>
 
-                            ${
-                              isInSummaryWindow
-                                ? `
-                                        <span class="summary-status">
-                                            IN SUMMARY
-                                        </span>
-                                      `
-                                : `
-                                        <span class="older-status">
-                                            Older record
-                                        </span>
-                                      `
-                            }
+                                ${
+                                  isInSummaryWindow
+                                    ? `
+                                            <span class="summary-status">
+                                                IN SUMMARY
+                                            </span>
+                                          `
+                                    : `
+                                            <span class="older-status">
+                                                Older record
+                                            </span>
+                                          `
+                                }
 
-                        </td>
+                            </td>
 
-                    </tr>
-                `;
+                        </tr>
+                    `;
       })
       .join("");
 
@@ -315,13 +299,11 @@ async function loadRecords() {
             <table class="records-table">
 
                 <thead>
-
                     <tr>
                         <th>Date</th>
                         <th>Intake</th>
                         <th>Status</th>
                     </tr>
-
                 </thead>
 
                 <tbody>
@@ -401,7 +383,9 @@ function displaySummary(summary) {
 
   showMessage(
     summaryMessage,
-    `Valid days: ${summary.valid_days} · Missing days: ${summary.missing_days} · Suspicious days: ${summary.suspicious_days}`,
+    `Valid days: ${summary.valid_days} · ` +
+      `Missing days: ${summary.missing_days} · ` +
+      `Suspicious days: ${summary.suspicious_days}`,
   );
 }
 
@@ -437,20 +421,45 @@ async function analyzeHydration() {
       return;
     }
 
-    document.getElementById("insightText").textContent = data.insight;
+    /*
+     * The normal recommendation path
+     * returns insight + recommendation.
+     */
+    if (data.insight && data.insight.trim()) {
+      document.getElementById("insightText").textContent = data.insight;
 
-    document.getElementById("recommendationText").textContent =
-      data.recommendation;
+      document.getElementById("recommendationText").textContent =
+        data.recommendation || "No recommendation provided.";
 
-    document.getElementById("actionText").textContent = formatStatus(
-      data.action,
-    );
+      document.getElementById("actionText").textContent = formatStatus(
+        data.action,
+      );
 
-    document.getElementById("confidenceText").textContent = formatStatus(
-      data.confidence,
-    );
+      document.getElementById("confidenceText").textContent = formatStatus(
+        data.confidence,
+      );
 
-    recommendationBox.classList.remove("hidden");
+      recommendationBox.classList.remove("hidden");
+    } else {
+      /*
+       * NO_ACTION / insufficient-data case.
+       *
+       * The analysis completed but there
+       * may not be a normal recommendation
+       * returned by the endpoint.
+       */
+      recommendationBox.classList.remove("hidden");
+
+      document.getElementById("insightText").textContent =
+        "There is not enough reliable hydration data to make a meaningful recommendation.";
+
+      document.getElementById("recommendationText").textContent =
+        "Continue recording your daily water intake so there is enough reliable data for analysis.";
+
+      document.getElementById("actionText").textContent = "No Action";
+
+      document.getElementById("confidenceText").textContent = "High";
+    }
 
     showMessage(
       agentMessage,
@@ -489,14 +498,14 @@ async function loadAgentTrace() {
       return;
     }
 
-    /*
-     * Logs are returned newest first.
-     * Reverse them so the workflow is
-     * displayed in execution order.
-     */
     const latestRun = getLatestRun(logs);
 
-    const orderedLogs = latestRun.reverse();
+    /*
+     * API returns newest first.
+     * Reverse the selected run so that
+     * the UI shows execution order.
+     */
+    const orderedLogs = [...latestRun].reverse();
 
     const stepNames = {
       get_user_profile: "User profile retrieved",
@@ -557,19 +566,10 @@ function getLatestRun(logs) {
     "save_recommendation",
   ];
 
-  const latestRun = [];
-
-  for (const log of logs) {
-    if (expectedSteps.includes(log.tool_name)) {
-      latestRun.push(log);
-    }
-
-    if (log.tool_name === "get_user_profile" && latestRun.length > 1) {
-      break;
-    }
-  }
-
-  return latestRun;
+  return logs
+    .filter((log) => expectedSteps.includes(log.tool_name))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
 }
 
 /* -----------------------------
