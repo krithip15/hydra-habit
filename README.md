@@ -221,11 +221,14 @@ Recommendations are based on the supplied profile and calculated hydration summa
 
 When the available hydration data is insufficient, the agent avoids making a normal recommendation and instead asks the user to continue recording data.
 
-## AI Usage
+## Documentation
 
-AI assistance was used during development for guidance, code assistance, debugging, testing suggestions, and documentation.
+Additional project documentation is available in the `docs/` directory:
 
-See `AI_USAGE.md` for the AI tools, important prompts, contribution details, and development notes.
+- [Architecture](docs/architecture.md)
+- [Database Schema](docs/database-schema.md)
+- [Product Note](docs/product-note.md)
+- [AI Usage](AI_USAGE.md)
 
 ## Project Status
 
