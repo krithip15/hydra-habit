@@ -137,7 +137,7 @@ python seed/seed_data.py
 To reset and recreate the sample data:
 
 ```
-python seed/seed_data.py --reset
+python -m seed.seed_data --reset
 ```
 
 ## Running the Project
