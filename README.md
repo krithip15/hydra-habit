@@ -222,6 +222,10 @@ Recommendations are based on the supplied profile and calculated hydration summa
 
 When the available hydration data is insufficient, the agent avoids making a normal recommendation and instead asks the user to continue recording data.
 
+Two safety scenarios are covered:
+- Insufficient data: fewer than three valid days → NO_ACTION.
+- Unusual data: suspicious intake values are excluded from analysis and the recommendation acknowledges the data-quality limitation.
+
 ## Documentation
 
 Additional project documentation is available in the `docs/` directory:
